@@ -1,6 +1,5 @@
 ---
 
-#......................
 
 - name: Récupérer Mastodon
   git: 
@@ -73,6 +72,8 @@
   changed_when: false
   register: vapid_public_key
 
+
+#................
 # - name: Génération des clés VAPID
 #   shell:
 #     cmd: ~/.rbenv/shims/bundle exec rake mastodon:webpush:generate_vapid_key
@@ -84,7 +85,7 @@
 #   register: vapid_keys
 #   when: not vapid_private_key.stdout|length or not vapid_public_key.stdout|length
 
-#................
+
 
 - name: Générer les clés VAPID
   command: |
@@ -103,7 +104,7 @@
 #................
 
 
-# https://stackoverflow.com/a/60074125
+
 - name: Définition des clés VAPID
   set_fact:
     vapid_private_key: { 'stdout' : "{{ vapid_keys.stdout.splitlines()|

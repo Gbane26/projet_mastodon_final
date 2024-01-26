@@ -39,3 +39,25 @@ Dans ce projet vous avez plusieurs roles
 - Ruby : non Idempotents
 
 - connexion refusée lors des telechargement de fichier en ligne 
+
+```
+#Exemple 
+
+- name: Ajouter clé Yarnpkg
+  get_url:
+    url: https://dl.yarnpkg.com/debian/pubkey.gpg
+    dest: /etc/apt/trusted.gpg.d/yarnpkg.asc
+  when: ansible_os_family == "Debian"
+
+```
+Tant tot get_url passe tant tot il refuse alors que rien a été modifié a son niveau 
+
+
+## Fichier inventory 
+
+Pour le on a decidé de le faire sur une seule machine;
+
+```
+mastodon-infra1 ansible_host=XX.XX.XX.12
+```
+

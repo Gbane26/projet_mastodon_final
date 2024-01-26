@@ -56,6 +56,6 @@
     name: bundler
     state: present
     executable: ~/.rbenv/shims/gem
-    norc: true # Eviter un warning de changement de valeur par défaut
+    norc: true 
   become_user: mastodon
   become: true

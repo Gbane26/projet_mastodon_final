@@ -8,5 +8,5 @@ ruby_version: 3.0.4
 
 postgresql_host: "{{ hostvars[groups['mastodon_postgresql'][0]]['ansible_env'].SSH_CONNECTION.split(' ')[2] }}"
 postgresql_user: mastodon
-postgresql_password: blabla
+postgresql_password: mastodon
 postgresql_database: mastodon_production

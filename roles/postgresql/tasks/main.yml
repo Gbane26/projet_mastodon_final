@@ -1,10 +1,9 @@
 ---
 
-# - name: Ajouter clé PostgreSQL
-# # apt_key module deprecated
-#   get_url:
-#     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
-#     dest: /etc/apt/trusted.gpg.d/postgresql.asc
+- name: Ajouter clé PostgreSQL
+  get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /etc/apt/trusted.gpg.d/postgresql.asc
 
 - name: Ajouter le dépôt PostgreSQL
   apt_repository:
@@ -42,24 +41,11 @@
     path: /etc/postgresql/{{ postgresql_version.stdout }}/main/postgresql.conf
   notify: Redémarrer PostgreSQL
 
-# # https://serverfault.com/a/1040389
-# - name: Récupérer l'interface réseau
-#   set_fact:
-#     netInterface: "{{ ansible_facts | dict2items | selectattr('value.ipv4', 'defined') | selectattr('value.ipv4.address', 'equalto', ansible_host) | first }}"
-
-
-# - name: Configuration de l'authentification PostgreSQL
-#   lineinfile:
-#     regexp: "^host    all             all             {{ netInterface.value.ipv4.network }}/{{ netInterface.value.ipv4.prefix }}.*$"
-#     line: "host    all             all             {{ netInterface.value.ipv4.network }}/{{ netInterface.value.ipv4.prefix }}            scram-sha-256"
-#     path: /etc/postgresql/{{ postgresql_version.stdout }}/main/pg_hba.conf
-#   notify: Redémarrer PostgreSQL
-
 - name: Configure PostgreSQL authentication for user postgres
   lineinfile:
     path: "/etc/postgresql/{{ postgresql_version.stdout }}/main/pg_hba.conf"
     line: "local   all             all                                     md5"
-  # become: true
+  become: true
   notify: Redémarrer PostgreSQL
 
 

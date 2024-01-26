@@ -1,20 +1,12 @@
 ---
 
-# - name: Dépendances Ansible
-#   hosts: localhost
-#   gather_facts: false
-#   tasks:
-#     - name: Installation de paquets pip
-#       pip:
-#         name: netaddr
-#         state: present
 
 - name: Déploiement de Mastodon sur les serveurs web
   hosts: web
   roles:
-    # - common
-    # - postgresql
-    # - yarn-nodejs
-    # - ruby
+    - common
+    - postgresql
+    - yarn-nodejs
+    - ruby
     - mastodon
-    # - proxy
+    - proxy
