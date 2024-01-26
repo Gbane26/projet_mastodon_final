@@ -1,0 +1,64 @@
+---
+
+- name: Ajouter clé PostgreSQL
+# apt_key module deprecated
+  get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /etc/apt/trusted.gpg.d/postgresql.asc
+
+- name: Ajouter le dépôt PostgreSQL
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/postgresql.asc] http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+    filename: postgresql
+    update_cache: yes
+
+- name: Installation de PostgreSQL
+  apt:
+    name: "{{ packages }}"
+    state: latest
+  vars:
+    packages:
+      - postgresql=15*
+      - postgresql-contrib=15*
+      - python3-psycopg2
+
+- name: Activation et démarrage de PostgreSQL
+  systemd:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Obtenir la version de PostgreSQL
+  shell: psql --version | head -n 1 | awk '{print $3}' | awk -F. '{print $1}'
+  register: postgresql_version
+  changed_when: false
+  ignore_errors: true
+
+- name: Configuration de PostgreSQL
+  lineinfile:
+    regexp: ^#?listen_addresses = .*$
+    line: listen_addresses = '*'
+    path: /etc/postgresql/{{ postgresql_version.stdout }}/main/postgresql.conf
+  notify: Redémarrer PostgreSQL
+
+# https://serverfault.com/a/1040389
+- name: Récupérer l'interface réseau
+  set_fact:
+    netInterface: "{{ ansible_facts | dict2items | selectattr('value.ipv4', 'defined') | selectattr('value.ipv4.address', 'equalto', ansible_host) | first }}"
+
+
+- name: Configuration de l'authentification PostgreSQL
+  lineinfile:
+    regexp: "^host    all             all             {{ netInterface.value.ipv4.network }}/{{ netInterface.value.ipv4.prefix }}.*$"
+    line: "host    all             all             {{ netInterface.value.ipv4.network }}/{{ netInterface.value.ipv4.prefix }}            scram-sha-256"
+    path: /etc/postgresql/{{ postgresql_version.stdout }}/main/pg_hba.conf
+  notify: Redémarrer PostgreSQL
+
+- name: Create PostgreSQL user
+  postgresql_user:
+    name: "{{ postgresql_user }}"
+    password: "{{ postgresql_password }}"
+    role_attr_flags: CREATEDB,NOSUPERUSER
+  become_user: postgres
+  become: true

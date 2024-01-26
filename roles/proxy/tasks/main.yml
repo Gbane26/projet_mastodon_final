@@ -1,0 +1,32 @@
+---
+
+- name: Installation de Nginx (Debian)
+  apt:
+    name: "{{ packages }}"
+    state: latest
+  vars:
+    packages:
+      - nginx
+
+- name: Installation de la configuration Nginx
+  template:
+    src: files/nginx-mastodon.conf
+    dest: /etc/nginx/sites-available/mastodon
+  notify: Redémarrer Nginx
+
+- name: Activation de la configuration Nginx
+  file:
+    src: /etc/nginx/sites-available/mastodon
+    dest: /etc/nginx/sites-enabled/mastodon
+    state: link
+  notify: Redémarrer Nginx
+
+- name: Installation de la clé et du certificat
+  copy:
+    src: files/{{ item }}
+    dest: /etc/ssl/{{ item }}
+    mode: 0400
+  with_items:
+  - "{{ mastodon_fqdn }}.key"
+  - "{{ mastodon_fqdn }}.crt"
+  notify: Redémarrer Nginx

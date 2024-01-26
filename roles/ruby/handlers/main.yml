@@ -1,0 +1,8 @@
+---
+
+- name: Reload shell
+  command: exec $SHELL
+  environment:
+    PATH: "{{ lookup('env', 'HOME') }}/.rbenv/bin:{{ lookup('env', 'PATH') }}"
+  listen: rbenv_installed
+  listen: ruby_installed

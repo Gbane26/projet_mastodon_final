@@ -1,0 +1,2 @@
+[web]
+mastodon-infra1 ansible_host=10.44.44.129

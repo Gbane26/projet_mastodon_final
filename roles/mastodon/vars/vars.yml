@@ -1,0 +1,6 @@
+---
+
+mastodon_services:
+  - mastodon-sidekiq.service
+  - mastodon-streaming.service
+  - mastodon-web.service

@@ -1,0 +1,186 @@
+---
+
+#......................
+
+- name: Récupérer Mastodon
+  git: 
+    repo: https://github.com/mastodon/mastodon.git
+    dest: ~/live
+    version: "{{ mastodon_version }}"
+    force: yes
+  become_user: mastodon
+  become: true
+  register: mastodon_git
+
+- name: Créer le répertoire .bundle
+  file:
+    path: ~mastodon/live/.bundle
+    state: directory
+    owner: mastodon
+    group: mastodon
+
+- name: Configuration de Bundler
+  template:
+    src: files/bundler.conf
+    dest: ~mastodon/live/.bundle/config
+    owner: mastodon
+    group: mastodon
+
+- name: Installation de Mastodon
+  shell: 
+    cmd: ~/.rbenv/shims/bundle install && yarn install --pure-lockfile
+    chdir: ~/live/
+  become_user: mastodon
+  become: true
+  when: mastodon_git.changed
+  notify: Restart Mastodon
+
+- name: Récupération ou génération de SECRET_KEY_BASE
+  shell:
+    cmd: SECRET_KEY_BASE=$(grep SECRET_KEY_BASE= ~mastodon/live/.env.production|cut -d '=' -f2); [ -z $SECRET_KEY_BASE ] && RAILS_ENV=production ~/.rbenv/shims/bundle exec rake secret || echo $SECRET_KEY_BASE
+    chdir: ~/live/
+  become_user: mastodon
+  become: true
+  changed_when: false
+  register: secret_key_base
+
+- name: Récupération ou génération de OTP_SECRET
+  shell:
+    cmd: OTP_SECRET=$(grep OTP_SECRET= ~mastodon/live/.env.production|cut -d '=' -f2); [ -z $OTP_SECRET ] && ~/.rbenv/shims/bundle exec rake secret || echo $OTP_SECRET
+    chdir: ~/live/
+  environment:
+    RAILS_ENV: production
+  become_user: mastodon
+  become: true
+  changed_when: false
+  register: otp_secret
+
+- name: Récupération de VAPID_PRIVATE_KEY
+  shell:
+    cmd: grep VAPID_PRIVATE_KEY= ~mastodon/live/.env.production | sed -e 's/VAPID_PRIVATE_KEY=//' 
+    chdir: ~/live/
+  become_user: mastodon
+  become: true
+  changed_when: false
+  register: vapid_private_key
+
+- name: Récupération de VAPID_PUBLIC_KEY
+  shell:
+    cmd: grep VAPID_PUBLIC_KEY= ~mastodon/live/.env.production | sed -e 's/VAPID_PUBLIC_KEY=//' 
+    chdir: ~/live/
+  become_user: mastodon
+  become: true
+  changed_when: false
+  register: vapid_public_key
+
+# - name: Génération des clés VAPID
+#   shell:
+#     cmd: ~/.rbenv/shims/bundle exec rake mastodon:webpush:generate_vapid_key
+#     chdir: ~/live/
+#   environment:
+#     RAILS_ENV: production
+#   become_user: mastodon
+#   become: true
+#   register: vapid_keys
+#   when: not vapid_private_key.stdout|length or not vapid_public_key.stdout|length
+
+#................
+
+- name: Générer les clés VAPID
+  command: |
+    mkdir -p /etc/mastodon
+    VAPID_KEYS=$(docker run --rm tootsuite/mastodon:v3.4.1 /bin/bash -c "RAILS_ENV=production bin/tootctl cache push; RAILS_ENV=production bin/tootctl mastodon:vapid_key")
+    echo "vapid_private_key: $(echo $VAPID_KEYS | awk '{print $1}')" > /etc/mastodon/vapid_keys.yml
+    echo "vapid_public_key: $(echo $VAPID_KEYS | awk '{print $2}')" >> /etc/mastodon/vapid_keys.yml
+  become_user: mastodon
+
+- name: Afficher les clés VAPID
+  debug:
+    var: vapid_keys
+  vars:
+    vapid_keys: "{{ lookup('file', '/etc/mastodon/vapid_keys.yml') }}"
+
+#................
+
+
+# https://stackoverflow.com/a/60074125
+- name: Définition des clés VAPID
+  set_fact:
+    vapid_private_key: { 'stdout' : "{{ vapid_keys.stdout.splitlines()|
+                           select('match', '^VAPID_PRIVATE_KEY=(.*)$')|
+                           map('regex_replace', my_regex, my_replace)|first }}" }
+    vapid_public_key: { 'stdout' : "{{ vapid_keys.stdout.splitlines()|
+                           select('match', '^VAPID_PUBLIC_KEY=(.*)$')|
+                           map('regex_replace', my_regex, my_replace)|first }}" }
+  vars:
+    my_regex: '^([A-Z_]*)=(.*)$'
+    my_replace: '\2'
+  when: not vapid_private_key.stdout|length or not vapid_public_key.stdout|length  
+
+- name: Configuration de Mastodon
+  template:
+    src: templates/.env.production
+    dest: ~mastodon/live/.env.production
+    owner: mastodon
+    group: mastodon
+  notify: Restart Mastodon
+
+- name: Vérifier si la base de données Mastodon existe
+  postgresql_db:
+    login_host: "{{ postgresql_host }}"
+    login_user: "{{ postgresql_user }}"
+    login_password: "{{ postgresql_password }}"
+    name: "{{ postgresql_database }}"
+    state: present
+  check_mode: yes
+  register: mastodon_db
+
+- name: Mise en place de la base de données
+  command: 
+    cmd: ~/.rbenv/shims/bundle exec rake db:setup
+    chdir: ~/live/
+  environment:
+    RAILS_ENV: production
+  become_user: mastodon
+  become: true
+  when: mastodon_db.changed
+
+- name: Compilation des assets
+  command: 
+    cmd: ~/.rbenv/shims/bundle exec rake assets:precompile
+    chdir: ~/live/
+  environment:
+    RAILS_ENV: production
+  become_user: mastodon
+  become: true
+  when: mastodon_git.changed
+
+- name: Installation des services Mastodon
+  copy:
+    src: ~mastodon/live/dist/{{ item }}
+    dest: /etc/systemd/system/{{ item }}
+    remote_src: true
+  with_items: "{{ mastodon_services }}" 
+  notify: Restart Mastodon
+
+- name: Créer le répertoire de configuration du service
+  file:
+    path: /etc/systemd/system/{{ item }}.d
+    state: directory
+  with_items: "{{ mastodon_services }}" 
+
+- name: Configuration de l'adresse d'écoute de Mastodon
+  template:
+    src: files/mastodon-service-bind.conf
+    dest: /etc/systemd/system/{{ item }}.d/bind.conf
+  with_items: "{{ mastodon_services }}" 
+  notify: Restart Mastodon
+
+- name: Activer et lancer Mastodon
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: ansible_os_family == "Debian"
+  with_items: "{{ mastodon_services }}" 

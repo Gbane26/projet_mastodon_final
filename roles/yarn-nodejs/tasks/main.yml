@@ -1,0 +1,90 @@
+---
+
+# - name: Ajouter clé NodeJS
+# # apt_key module deprecated
+#   get_url:
+#     url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+#     dest: /etc/apt/trusted.gpg.d/nodesource.asc # .asc filename extension to avoid gpg --dearmor
+#   when: ansible_os_family == "Debian"
+
+- name: Ajouter le dépôt NodeJS 16
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/nodesource.asc] https://deb.nodesource.com/node_16.x {{ ansible_distribution_release }} main"
+    state: present
+    filename: nodesource
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+# - name: Ajouter clé Yarnpkg
+#   get_url:
+#     url: https://dl.yarnpkg.com/debian/pubkey.gpg
+#     dest: /etc/apt/trusted.gpg.d/yarnpkg.asc
+#   when: ansible_os_family == "Debian"
+
+- name: Ajouter le dépôt Yarnpkg
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/yarnpkg.asc] https://dl.yarnpkg.com/debian/ stable main"
+    state: present
+    filename: yarnpkg
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+# Nécessaire sur les distributions incluant une version + récente de NodeJS/Yarn que celle nécessaire
+- name: Apt-pinning pour les paquets NodeJS/Yarn
+  copy:
+    src: files/{{ item }}
+    dest: /etc/apt/preferences.d/{{ item }}
+  with_items:
+  - 99nodesource
+  - 99yarnpkg
+  when: ansible_os_family == "Debian"
+
+- name: Installation des paquets pour Mastodon (Debian)
+  apt:
+    name: "{{ packages }}"
+    state: latest
+  vars:
+    packages:
+      - postfix
+      - imagemagick
+      - ffmpeg
+      - libpq-dev
+      - libxml2-dev
+      - libxslt1-dev
+      - file
+      - git-core
+      - libprotobuf-dev
+      - protobuf-compiler
+      - pkg-config
+      - nodejs
+      - autoconf
+      - bison
+      - build-essential
+      - libssl-dev
+      - libyaml-dev
+      - libreadline6-dev
+      - zlib1g-dev
+      - libncurses5-dev
+      - libffi-dev
+      - libgdbm-dev
+      - redis-server
+      - redis-tools
+      - libidn11-dev
+      - libicu-dev
+      - libjemalloc-dev
+      - yarn
+  when: ansible_os_family == "Debian"
+
+- name: Création d'un utilisateur mastodon
+  user:
+    name: mastodon
+    shell: /bin/bash
+    home: /home/mastodon
+    create_home: yes
+
+# Page d'erreur sur Ubuntu avec juste le logo Mastodon
+# Les logs de nginx indiquent plein de permission denied
+- name: Modifier les permissions du répertoire de Mastodon
+  file:
+    path: ~mastodon/
+    mode: 0755

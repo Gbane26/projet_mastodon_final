@@ -1,0 +1,34 @@
+---
+
+
+- name: Mettre à jour les systèmes
+  package:
+    # update_cache: yes
+    name: "*"
+    state: latest
+
+# - name: Mise à jour du système (Debian)
+#   apt:
+#     update_cache: yes
+#     upgrade: full
+#   when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+
+- name: Mise à jour du système (RH)
+  dnf:
+    update_cache: yes
+    update_only: yes
+    state: latest
+  when: ansible_distribution == "RedHat" or ansible_distribution == "CentOS"
+
+- name: Installation des paquets de base (Debian)
+  apt:
+    name: "{{ packages }}"
+    state: latest
+  vars:
+    packages:
+      - gnupg
+      - apt-transport-https
+      - ca-certificates
+      - sudo
+  when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+

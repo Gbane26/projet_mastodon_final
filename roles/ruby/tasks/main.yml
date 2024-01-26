@@ -1,0 +1,61 @@
+---
+#........................................
+
+
+- name: Récupération de l'installeur rbenv
+  get_url: 
+    url: https://github.com/rbenv/rbenv-installer/raw/HEAD/bin/rbenv-installer
+    dest: ~/rbenv-installer
+  become_user: mastodon
+  become: true
+  register: rbenv_installer
+
+- name: Installation de rbenv
+  command: 
+    cmd: bash ~/rbenv-installer
+  become_user: mastodon
+  become: true
+  when: rbenv_installer.changed
+
+- name: Récupérer l'environnement Bash pour rbenv
+  command: 
+    cmd: ~/.rbenv/bin/rbenv init -
+  register: rbenv_bash
+  become_user: mastodon
+  become: true
+  when: rbenv_installer.changed
+
+- name: Configuration de l'environnement Bash pour rbenv
+  blockinfile:
+    marker: "# {mark} rbenv"
+    block: "{{ rbenv_bash.stdout }}"
+    path: ~/.bashrc
+  become_user: mastodon
+  become: true
+  when: rbenv_installer.changed
+
+- name: Récupérer la version de Ruby
+  shell: 
+    cmd: ~/.rbenv/bin/rbenv version | cut -d ' ' -f 1
+  register: ruby_installed_version
+  become_user: mastodon
+  become: true
+  changed_when: false
+
+- name: Installer l'environnement Ruby
+  shell: 
+    cmd: "~/.rbenv/bin/rbenv install -f {{ ruby_version }} && ~/.rbenv/bin/rbenv global {{ ruby_version }}"
+  environment:
+    RUBY_CONFIGURE_OPTS: --with-jemalloc
+  become_user: mastodon
+  become: true
+  when: ruby_installed_version.stdout != ruby_version
+
+- name: Installer Bundler
+  gem:
+    name: bundler
+    state: present
+    executable: ~/.rbenv/shims/gem
+    norc: true # Eviter un warning de changement de valeur par défaut
+  become_user: mastodon
+  become: true

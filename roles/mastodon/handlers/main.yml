@@ -1,0 +1,7 @@
+---
+
+- name: Restart Mastodon
+  systemd:
+    name: "{{ item }}"
+    state: restarted
+  with_items: "{{ mastodon_services }}"
