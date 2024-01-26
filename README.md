@@ -55,7 +55,7 @@ Tant tot get_url passe tant tot il refuse alors que rien a été modifié a son 
 
 ## Fichier inventory 
 
-Pour le on a decidé de le faire sur une seule machine;
+Pour l'inventory on a decidé de le faire sur une seule machine;
 
 ```
 mastodon-infra1 ansible_host=XX.XX.XX.12
