@@ -1,9 +1,9 @@
 ---
 
-- name: Ajouter clé PostgreSQL
-  get_url:
-    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
-    dest: /etc/apt/trusted.gpg.d/postgresql.asc
+# - name: Ajouter clé PostgreSQL
+#   get_url:
+#     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+#     dest: /etc/apt/trusted.gpg.d/postgresql.asc
 
 - name: Ajouter le dépôt PostgreSQL
   apt_repository:
