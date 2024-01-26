@@ -23,12 +23,12 @@ Comment l'utiliser :
 
 Dans ce projet vous avez plusieurs roles
 
-# - common : Pour mettre en place 
-# - postgresql : Pour la configuration de POSTGRESQL
-# - yarn-nodejs : YARN et NODEJS 
-# - ruby : Pour Installation de Ruby
-# - mastodon
-# - proxy : Pour Configuration de nginx
+- common : Pour mettre en place 
+- postgresql : Pour la configuration de POSTGRESQL
+- yarn-nodejs : YARN et NODEJS 
+- ruby : Pour Installation de Ruby
+- mastodon
+- proxy : Pour Configuration de nginx
 
 
 
