@@ -23,7 +23,7 @@ Comment l'utiliser :
 
 Dans ce projet vous avez plusieurs roles
 
-- common : Pour mettre en place 
+- common : Pour les mise à jour  
 - postgresql : Pour la configuration de POSTGRESQL
 - yarn-nodejs : YARN et NODEJS 
 - ruby : Pour Installation de Ruby
